@@ -45,10 +45,13 @@ Cabal-version:       >=1.2
 
 Library
   -- Modules exported by the library.
-  -- Exposed-modules:     
+  Exposed-modules:   System.TPFS.Address,
+                     System.TPFS.Device
   
   -- Packages needed in order to build this package.
-  -- Build-depends:       
+  Build-depends:     base       ==4.*,
+                     bytestring >=0.9,
+                     binary     >=0.5
   
   -- Modules not exported by this package.
   -- Other-modules:       
