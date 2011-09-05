@@ -54,10 +54,10 @@ instance Show Address where
   showsPrec = const (showString . printf "0x%032x" . toInteger)
 
 instance Binary Address where
-  put (Address l h) = do putWord64le l
-                         putWord64le h
   get      = Address <$> getWord64le
                      <*> getWord64le
+  put (Address l h) = do putWord64le l
+                         putWord64le h
 
 tup f (a, b) = (f a, f b)
 
