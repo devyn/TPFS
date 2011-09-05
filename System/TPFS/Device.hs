@@ -2,11 +2,12 @@
 
 module System.TPFS.Device (Device(..)) where
 
+import           Control.Applicative
 import           Data.ByteString.Lazy (ByteString,hGet,hPut)
 import           System.IO
 import           System.TPFS.Address
 
-class Monad m => Device m h where
+class (Functor m, Applicative m, Monad m) => Device m h where
   dGet :: h
        -> Address
        -> Int
