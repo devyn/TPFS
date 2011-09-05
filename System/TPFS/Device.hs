@@ -7,20 +7,20 @@ import           System.IO
 import           System.TPFS.Address
 
 class Monad m => Device m h where
-  getDev :: h
-         -> Address
-         -> Int
-         -> m ByteString
+  dGet :: h
+       -> Address
+       -> Int
+       -> m ByteString
 
-  putDev :: h
-         -> Address
-         -> ByteString
-         -> m ()
+  dPut :: h
+       -> Address
+       -> ByteString
+       -> m ()
 
 instance Device IO Handle where
-  getDev h off len =
+  dGet h off len =
     do hSeek h AbsoluteSeek (toInteger off)
        hGet  h len
-  putDev h off s =
+  dPut h off s =
     do hSeek h AbsoluteSeek (toInteger off)
        hPut  h s
