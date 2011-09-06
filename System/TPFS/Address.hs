@@ -31,7 +31,7 @@ instance Num Address where
   fromInteger i          = uncurry Address . rtup . tup fromInteger $ i `divMod` (2^64)
 
 instance Enum Address where
-  toEnum   i             = uncurry Address . rtup . tup toEnum      $ i `divMod` (2^64)
+  toEnum   i             = uncurry Address . rtup . tup fromInteger $ (toEnum i) `divMod` (2^64)
   fromEnum (Address l h) = fromIntegral l + fromIntegral h * (2^64)
   succ     a             = a + 1
   pred     a             = a - 1
