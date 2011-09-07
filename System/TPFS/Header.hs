@@ -15,7 +15,7 @@ data Header = Header { fileOffset  :: Address  -- ^ The address of the beginning
                      , maxTags     :: Word64   -- ^ The maximum number of tags supported.
                      , blockBitmap :: Address  -- ^ The address of the beginning of the block allocation bitmap.
                      , blockOffset :: Address  -- ^ The beginning of the block space.
-                     , blockSize   :: Word64   -- ^ The size of each block. Actual block content is
+                     , blockSize   :: Word32   -- ^ The size of each block. Actual block content is
                                                -- @blockSize hdr - 16@ due to the pointer at the end of a block.
                      , maxBlocks   :: Word64   -- ^ Block capacity of the file system.
                      }
@@ -31,7 +31,7 @@ instance Binary Header where
                       <*> getWord64le
                       <*> get
                       <*> get
-                      <*> getWord64le
+                      <*> getWord32le
                       <*> getWord64le
 
   put hdr = do put         $ Magic
@@ -41,7 +41,7 @@ instance Binary Header where
                putWord64le $ maxFiles    hdr
                put         $ blockBitmap hdr
                put         $ blockOffset hdr
-               putWord64le $ blockSize   hdr
+               putWord32le $ blockSize   hdr
                putWord64le $ maxBlocks   hdr
 
 getHeader :: Device m h => h -> m Header
