@@ -9,9 +9,10 @@ import           System.IO
 import           System.TPFS.Address
 
 class (Functor m, Applicative m, Monad m) => Device m h where
-  dGet :: h
+  dGet :: Integral i
+       => h
        -> Address
-       -> Int
+       -> i
        -> m ByteString
 
   dPut :: h
@@ -22,10 +23,16 @@ class (Functor m, Applicative m, Monad m) => Device m h where
 instance Device IO Handle where
   dGet h off len =
     do hSeek h AbsoluteSeek (toInteger off)
-       r <- hGet h len
-       if B.length r < toEnum len
-          then return (r `B.append` B.replicate (toEnum len - B.length r) 0)
+       r <- hGetI h len
+       if B.length r < fromIntegral len
+          then return (r `B.append` B.replicate (fromIntegral len - B.length r) 0)
           else return  r
   dPut h off s =
     do hSeek h AbsoluteSeek (toInteger off)
        hPut  h s
+
+hGetI          :: Integral l => Handle -> l -> IO ByteString
+hGetI h l
+    | l > mbi   = B.append <$> hGet h maxBound <*> hGetI h (l - mbi)
+    | otherwise = hGet h (fromEnum l)
+  where   mbi   = fromIntegral (maxBound :: Int)
