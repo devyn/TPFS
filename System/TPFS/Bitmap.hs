@@ -16,18 +16,18 @@ module System.TPFS.Bitmap (
 import           Data.Bits
 import qualified Data.ByteString.Lazy as B
 import           Data.List
-import           Data.Word
 import           System.TPFS.Address
 import           System.TPFS.Device
 
 -- | Reads a range of bits from a bitmap as a list of booleans.
 bmpRead :: (Device m h, Integral i) => h -> Address -> (i, i) -> m [Bool]
-bmpRead h a (s,e) = (genericDrop s . genericTake (e+1) . B.foldr (\ w l -> bits w ++ l) [])
-                    `fmap` dGet h base (byte2 - byte1 + 1)
+bmpRead h a (s,e) = (genericDrop bit1 . genericTake (len*8-7+bit2) .
+                      B.foldr (\ c l -> bits c ++ l) [])
+                    `fmap` dGet h base len
   where (byte1, bit1) = s `divMod` 8
         (byte2, bit2) = e `divMod` 8
         base          = a + fromIntegral byte1
-        (n,m)         = (bit2 + 1,bit1)
+        len           = byte2 - byte1 + 1
 
 -- | Reads a single bit from a bitmap as a boolean.
 bmpReadAt :: (Device m h, Integral i) => h -> Address -> i -> m Bool
@@ -75,7 +75,7 @@ bmpAll          :: (Device m h, Integral i)
                 -> Bool      -- ^ Bit to search for.
                 -> m [i]
 bmpAll h a r bit = (map snd . filter ((== bit).fst) . fold) `fmap` bmpRead h a r
-  where fold     = snd . mapAccumL (\ i b -> (i+1, (b,i))) 0
+  where fold     = snd . mapAccumL (\ i b -> (i+1, (b,i))) (fst r)
 
 -- | Searches for a specific bit in a bit range.
 bmpFind          :: (Device m h, Integral i)
