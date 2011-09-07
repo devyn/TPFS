@@ -7,7 +7,10 @@ module System.TPFS.Bitmap (
   bmpSet,
   bmpClear,
   bmpSetAt,
-  bmpClearAt
+  bmpClearAt,
+  -- * Searching
+  bmpAll,
+  bmpFind
   ) where
 
 import           Data.Bits
@@ -62,6 +65,29 @@ bmpSetAt   h a i = bmpWriteRange True  h a (i, i)
 -- | Clears a specific bit in a bitmap.
 bmpClearAt      :: (Device m h, Integral i) => h -> Address -> i -> m ()
 bmpClearAt h a i = bmpWriteRange False h a (i, i)
+
+-- | Returns a list of indices of all matched bits in a range of a
+--   bitmap's bits.
+bmpAll          :: (Device m h, Integral i)
+                => h
+                -> Address   -- ^ Base address of the bitmap.
+                -> (i, i)    -- ^ Bit range to search in.
+                -> Bool      -- ^ Bit to search for.
+                -> m [i]
+bmpAll h a r bit = (map snd . filter ((== bit).fst) . fold) `fmap` bmpRead h a r
+  where fold     = snd . mapAccumL (\ i b -> (i+1, (b,i))) 0
+
+-- | Searches for a specific bit in a bit range.
+bmpFind          :: (Device m h, Integral i)
+                 => h
+                 -> Address      -- ^ Base address of the bitmap.
+                 -> (i, i)       -- ^ Bit range to search in.
+                 -> Bool         -- ^ Bit to search for.
+                 -> m (Maybe i)  -- ^ Just the bit index of the first match, or Nothing if no match was found.
+bmpFind h a r bit = do m <- bmpAll h a r bit
+                       case m of
+                         i:_ -> return (Just i)
+                         []  -> return Nothing
 
 bits n = [testBit n b | b <- [0 .. bitSize n - 1]]
 
