@@ -47,7 +47,9 @@ Library
   -- Modules exported by the library.
   Exposed-modules:   System.TPFS.Address,
                      System.TPFS.Bitmap,
+                     System.TPFS.Block,
                      System.TPFS.Device,
+                     System.TPFS.Errors,
                      System.TPFS.Header
   
   -- Packages needed in order to build this package.
