@@ -1,14 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module System.TPFS.Device (Device(..)) where
+module System.TPFS.Device (Device(..), Interleave(..)) where
 
 import           Control.Applicative
 import           Data.ByteString.Lazy (ByteString,hGet,hPut)
 import qualified Data.ByteString.Lazy as B
 import           System.IO
+import           System.IO.Unsafe (unsafeInterleaveIO)
 import           System.TPFS.Address
 
-class (Functor m, Applicative m, Monad m) => Device m h where
+class (Functor m, Applicative m, Monad m, Interleave m) => Device m h where
   dGet :: Integral i
        => h
        -> Address
@@ -19,6 +20,12 @@ class (Functor m, Applicative m, Monad m) => Device m h where
        -> Address
        -> ByteString
        -> m ()
+
+-- | Only necessary for IO -- the default implementation should be
+-- sufficient for most monads.
+class Monad m => Interleave m where
+  interleave :: m a -> m a
+  interleave  = id
 
 instance Device IO Handle where
   dGet h off len =
@@ -36,3 +43,6 @@ hGetI h l
     | l > mbi   = B.append <$> hGet h maxBound <*> hGetI h (l - mbi)
     | otherwise = hGet h (fromEnum l)
   where   mbi   = fromIntegral (maxBound :: Int)
+
+instance Interleave IO where
+  interleave = unsafeInterleaveIO

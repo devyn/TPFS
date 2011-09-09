@@ -18,20 +18,21 @@ readBlock        :: Device m h
                  -> Address                        -- ^ The address of the block to read from.
                  -> m (ByteString, Maybe Address)  -- ^ The contents of the block, and a pointer to the
                                                    -- next block in the chain if there is one.
-readBlock h hdr a = do c <- dGet h a (blockSize hdr)
-                       let (bc, enn)
-                                = B.splitAt (fromIntegral $ blockSize hdr - 16) c
-                           next = decode enn
+readBlock h hdr a = do bc  <- dGet h  a                (blockSize hdr - 16)
+                       enn <- dGet h (a + fromIntegral (blockSize hdr - 16)) 16
+                       let next = decode enn
                            in return (bc, if next == 0
                                              then Nothing
                                              else Just next)
 
--- | Reads an entire block chain into a lazy bytestring.
+-- | Lazily reads an entire block chain into a bytestring. When used
+-- with the IO monad, it's possible that this function is unsafe.
 readBlocks        :: Device m h => h -> Header -> Address -> m ByteString
 readBlocks h hdr a = do (s,n) <- readBlock h hdr a
                         case n of
                           Nothing -> return s
-                          Just a' -> fmap (s `B.append`) $ readBlocks h hdr a'
+                          Just a' -> do s' <- interleave $ readBlocks h hdr a'
+                                        return $ B.append s s'
 
 -- | Writes a bytestring to a block. The string will be truncated to
 -- @blockSize hdr - 16@.
