@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
+-- | Defines a readable and writable random-access device class.
 module System.TPFS.Device (Device(..), Interleave(..)) where
 
 import           Control.Applicative
@@ -10,15 +11,19 @@ import           System.IO.Unsafe (unsafeInterleaveIO)
 import           System.TPFS.Address
 
 class (Functor m, Applicative m, Monad m, Interleave m) => Device m h where
+  -- | Reads bytes from the device. It should never return less than
+  -- the requested number of bytes.
   dGet :: Integral i
-       => h
-       -> Address
-       -> i
-       -> m ByteString
+       => h             -- ^ The device handle.
+       -> Address       -- ^ The address to read from.
+       -> i             -- ^ The number of bytes to read.
+       -> m ByteString  -- ^ The read bytestring. If read past EOF,
+                        -- the remaining bytes should be nulls.
 
-  dPut :: h
-       -> Address
-       -> ByteString
+  -- | Writes bytes to the device.
+  dPut :: h           -- ^ The device handle.
+       -> Address     -- ^ Address to write at.
+       -> ByteString  -- ^ String to write.
        -> m ()
 
 -- | Only necessary for IO -- the default implementation should be
