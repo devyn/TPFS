@@ -8,7 +8,8 @@ import           Data.Word
 import           System.TPFS.Address
 import           System.TPFS.Device
 
--- | The filesystem header.
+-- | A TPFS filesystem header, which is located at offset 0 in any
+-- filesystem, and is of length 'headerSize' bytes.
 data Header = Header { fileOffset  :: Address  -- ^ The address of the beginning of the file indexing table.
                      , maxFiles    :: Word64   -- ^ The maximum number of files supported.
                      , tagOffset   :: Address  -- ^ The address of the beginning of the tag indexing table.
@@ -21,6 +22,8 @@ data Header = Header { fileOffset  :: Address  -- ^ The address of the beginning
                      }
             deriving (Read, Show, Eq, Ord)
 
+-- | The calculated size of a header in bytes. It is constant for any
+-- header.
 headerSize = 104
 
 instance Binary Header where
@@ -44,9 +47,11 @@ instance Binary Header where
                putWord32le $ blockSize   hdr
                putWord64le $ maxBlocks   hdr
 
+-- | Loads the filesystem header from a device.
 getHeader :: Device m h => h -> m Header
 getHeader h = decode <$> dGet h 0 headerSize
 
+-- | Writes a filesystem header to the device.
 putHeader :: Device m h => h -> Header -> m ()
 putHeader h = dPut h 0 . encode
 
