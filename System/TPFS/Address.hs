@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -funbox-strict-fields #-}
+
 module System.TPFS.Address (Address) where
 
 import           Control.Applicative
@@ -8,7 +10,7 @@ import           Data.Ratio
 import           Data.Word
 import           Text.Printf
 
-data Address = Address Word64 Word64 deriving Eq
+data Address = Address !Word64 !Word64 deriving Eq
 
 instance Ord Address where
   compare a@(Address al ah) b@(Address bl bh)
