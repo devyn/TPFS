@@ -10,6 +10,8 @@ import           Data.Ratio
 import           Data.Word
 import           Text.Printf
 
+-- | A 128-bit unsigned word type composed of two 'Word64's, with
+-- serialization functions (see 'Data.Binary') specific to TPFS.
 data Address = Address !Word64 !Word64 deriving Eq
 
 instance Ord Address where
