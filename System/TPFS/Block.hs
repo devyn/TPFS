@@ -1,3 +1,12 @@
+-- | Functions for dealing with TPFS blocks and allocation. Blocks are
+-- structured on disk as such in pseudo-C:
+-- 
+-- @
+--     struct Block {
+--       char['blockSize' - 16] content;
+--       'Address'              next;
+--     };
+-- @
 module System.TPFS.Block (
   -- * Primitive operations
   -- ** Reading
@@ -121,8 +130,9 @@ writeBlock h hdr a s =
 createBlock :: Device m h
             => h
             -> Header
-            -> Address
-            -> (ByteString, Maybe Address) -> m ()
+            -> Address                      -- ^ The address to write the block at.
+            -> (ByteString, Maybe Address)  -- ^ The block content and next block address.
+            -> m ()
 createBlock h hdr a (s,n) = do writeBlock h hdr a s
                                consBlock  h hdr a n
 
