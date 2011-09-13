@@ -89,6 +89,9 @@ bmpFind h a r bit = do m <- bmpAll h a r bit
                          i:_ -> return (Just i)
                          []  -> return Nothing
 
-bits n = [testBit n b | b <- [0 .. bitSize n - 1]]
+bits n
+  | n == maxBound = replicate (bitSize n) True
+  | n == minBound = replicate (bitSize n) False
+  | otherwise     = [testBit n b | b <- [0 .. bitSize n - 1]]
 
 tup f (a, b) = (f a, f b)
