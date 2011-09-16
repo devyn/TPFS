@@ -10,7 +10,8 @@ module System.TPFS.Bitmap (
   bmpClearAt,
   -- * Searching
   bmpAll,
-  bmpFind
+  bmpFind,
+  bmpSearch
   ) where
 
 import           Data.Bits
@@ -89,9 +90,23 @@ bmpFind h a r bit = do m <- bmpAll h a r bit
                          i:_ -> return (Just i)
                          []  -> return Nothing
 
+-- | Finds a list of all indices at which the specified bitmap subset
+-- occurs within the range.
+bmpSearch :: (Device m h, Integral i)
+          => h
+          -> Address  -- ^ Base address of the bitmap.
+          -> (i, i)   -- ^ Bit range to search in.
+          -> [Bool]   -- ^ Subset to search for.
+          -> m [i]    -- ^ A list of match bit indices.
+bmpSearch h a r b = do bmp <- bmpRead h a r
+                       return $ genericFindIndices (b `isPrefixOf`) (tails bmp)
+
 bits n
   | n == maxBound = replicate (bitSize n) True
   | n == minBound = replicate (bitSize n) False
   | otherwise     = [testBit n b | b <- [0 .. bitSize n - 1]]
 
 tup f (a, b) = (f a, f b)
+
+genericFindIndices :: Integral i => (a -> Bool) -> [a] -> [i]
+genericFindIndices p xs = [ i | (x,i) <- zip xs [0..], p x ]
