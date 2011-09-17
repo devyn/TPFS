@@ -23,7 +23,7 @@ import           System.TPFS.Device
 -- | Reads a range of bits from a bitmap as a list of booleans.
 bmpRead :: (Device m h, Integral i) => h -> Address -> (i, i) -> m [Bool]
 bmpRead h a (s,e) = (genericDrop bit1 . genericTake (len*8-7+bit2) .
-                      B.foldr (\ c l -> bits c ++ l) [])
+                      B.foldl (\ l c -> l ++ bits c) [])
                     `fmap` dGet h base len
   where (byte1, bit1) = s `divMod` 8
         (byte2, bit2) = e `divMod` 8
