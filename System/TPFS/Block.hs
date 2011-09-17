@@ -22,6 +22,19 @@ module System.TPFS.Block (
   overwriteBlock,
   createBlocks,
   overwriteBlocks,
+  -- * Block allocation
+  allocateBlocks,
+  freeBlocks,
+  getFreeBlocks,
+  getFreeBlocksNear,
+  -- * High-level interface
+  {-
+  getChain,
+  editChain,
+  putChain,
+  truncateChain,
+  deleteChain,
+  -}
   -- * Mathematical helper functions
   divBlocks
   ) where
@@ -201,6 +214,58 @@ overwriteBlocks h hdr a o s =
                                   Nothing -> return s'
                                   Just a' -> f a' 0 s'
 
+allocateBlocks :: Device m h
+               => h
+               -> Header
+               -> [Address]
+               -> m ()
+allocateBlocks h hdr adrs =
+     do mapM_ (a . sort) ps
+        mapM_ set $ nub $ map (fst . head) ps
+  where ps  = groupBy g $ map (toSB_R hdr) (sort adrs)
+        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
+        a l = let sb = fst (head l)
+                  r1 = snd (head l)
+                  r2 = snd (last l)
+              in  bmpSet h (blockMap1 hdr) (sb * fromIntegral (superFactor hdr) + r1
+                                           ,sb * fromIntegral (superFactor hdr) + r2)
+        set = bmpSetAt   h (blockMap0 hdr)
+
+freeBlocks :: Device m h
+           => h
+           -> Header
+           -> [Address]
+           -> m ()
+freeBlocks h hdr adrs =
+     do mapM_ (a . sort) ps
+        mapM_ unsetp $ nub $ map (fst . head) ps
+  where ps     = groupBy g $ map (toSB_R hdr) adrs
+        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
+        a l = let sb = fst (head l)
+                  r1 = snd (head l)
+                  r2 = snd (last l)
+              in  bmpClear h (blockMap1 hdr) (sb * fromIntegral (superFactor hdr) + r1
+                                             ,sb * fromIntegral (superFactor hdr) + r2)
+        unsetp sb =
+          do sch <- bmpFind h (blockMap1 hdr) ( sb    * fromIntegral (superFactor hdr)
+                                              ,(sb+1) * fromIntegral (superFactor hdr) - 1) True
+             case sch of
+               Nothing -> bmpClearAt h (blockMap0 hdr) sb
+               _       -> return ()
+
+getFreeBlocks :: Device m h
+              => h
+              -> Header
+              -> m [Address]
+getFreeBlocks = undefined
+
+getFreeBlocksNear :: Device m h
+                  => h
+                  -> Header
+                  -> Address
+                  -> m [Address]
+getFreeBlocksNear = undefined
+
 truncateString l s = head (chopString l s)
 
 chopString :: Integral l => l -> ByteString -> [ByteString]
@@ -218,3 +283,16 @@ i `divBlocks` hdr
     | r == 0    = q
     | otherwise = q + 1
   where (q, r)  = i `quotRem` fromIntegral (blockSize hdr - 16)
+
+superScale = (^ 2) . superFactor
+
+superFactor = blockSize
+
+toSB_R   :: Integral i => Header -> Address -> (i, i)
+fromSB_R :: Integral i => Header -> (i, i)  -> Address
+
+toSB_R   hdr a      = (fromIntegral sb, fromIntegral r `quot` fromIntegral (blockSize hdr))
+  where      (sb,r) = (a - blockOffset hdr) `quotRem` fromIntegral (superScale hdr)
+fromSB_R hdr (sb,r) = blockOffset hdr
+                    + fromIntegral (sb * fromIntegral (superScale hdr))
+                    + fromIntegral (r * fromIntegral (blockSize hdr))
