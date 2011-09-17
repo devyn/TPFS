@@ -75,8 +75,7 @@ bmpAll          :: (Device m h, Integral i)
                 -> (i, i)    -- ^ Bit range to search in.
                 -> Bool      -- ^ Bit to search for.
                 -> m [i]
-bmpAll h a r bit = (map snd . filter ((== bit).fst) . fold) `fmap` bmpRead h a r
-  where fold     = snd . mapAccumL (\ i b -> (i+1, (b,i))) (fst r)
+bmpAll h a r bit = (map fst . filter ((== bit).snd) . zip [fst r..]) `fmap` bmpRead h a r
 
 -- | Searches for a specific bit in a bit range.
 bmpFind          :: (Device m h, Integral i)
