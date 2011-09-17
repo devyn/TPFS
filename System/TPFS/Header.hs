@@ -14,8 +14,9 @@ data Header = Header { fileOffset  :: Address  -- ^ The address of the beginning
                      , maxFiles    :: Word64   -- ^ The maximum number of files supported.
                      , tagOffset   :: Address  -- ^ The address of the beginning of the tag indexing table.
                      , maxTags     :: Word64   -- ^ The maximum number of tags supported.
-                     , blockMap0   :: Address  -- ^ The address of the beginning of the high-level block allocation bitmap.
-                     , blockMap1   :: Address  -- ^ The address of the beginning of the low-level block allocation bitmap.
+                     , blockMapSE  :: Address  -- ^ The address to the bitmap representing *empty* superblocks.
+                     , blockMapSF  :: Address  -- ^ The address to the bitmap representing *full* superblocks.
+                     , blockMapBL  :: Address  -- ^ The address to the bitmap representing each individual block.
                      , blockOffset :: Address  -- ^ The beginning of the block space.
                      , blockSize   :: Word32   -- ^ The size of each block. Actual block content is
                                                -- @blockSize hdr - 16@ due to the pointer at the end of a block.
@@ -25,7 +26,7 @@ data Header = Header { fileOffset  :: Address  -- ^ The address of the beginning
 
 -- | The calculated size of a header in bytes. It is constant for any
 -- header.
-headerSize = 116
+headerSize = 132
 
 instance Binary Header where
   get     = do get :: Get Magic
@@ -33,6 +34,7 @@ instance Binary Header where
                       <*> getWord64le
                       <*> get
                       <*> getWord64le
+                      <*> get
                       <*> get
                       <*> get
                       <*> get
@@ -44,8 +46,9 @@ instance Binary Header where
                putWord64le $ maxFiles    hdr
                put         $ tagOffset   hdr
                putWord64le $ maxFiles    hdr
-               put         $ blockMap0   hdr
-               put         $ blockMap1   hdr
+               put         $ blockMapSE  hdr
+               put         $ blockMapSF  hdr
+               put         $ blockMapBL  hdr
                put         $ blockOffset hdr
                putWord32le $ blockSize   hdr
                putWord64le $ maxBlocks   hdr
@@ -63,6 +66,6 @@ data Magic = Magic
 instance Binary Magic where
   get       = do m <- mapM (const getWord8) [1..8]
                  case map (toEnum.fromEnum) m of
-                   "TPFS_00_" -> return Magic
+                   "TPFS_01_" -> return Magic
                    _          -> fail "Invalid header."
-  put Magic = mapM_ (putWord8.toEnum.fromEnum) "TPFS_00_"
+  put Magic = mapM_ (putWord8.toEnum.fromEnum) "TPFS_01_"
