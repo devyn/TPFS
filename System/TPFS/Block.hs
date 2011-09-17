@@ -220,38 +220,32 @@ allocateBlocks :: Device m h
                -> [Address]
                -> m ()
 allocateBlocks h hdr adrs =
-     do mapM_ (a . sort) ps
-        mapM_ set $ nub $ map (fst . head) ps
-  where ps  = groupBy g $ map (toSB_R hdr) (sort adrs)
-        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
-        a l = let sb = fst (head l)
-                  r1 = snd (head l)
-                  r2 = snd (last l)
-              in  bmpSet h (blockMap1 hdr) (sb * fromIntegral (superFactor hdr) + r1
-                                           ,sb * fromIntegral (superFactor hdr) + r2)
-        set = bmpSetAt   h (blockMap0 hdr)
+  balloc bmpSet (bmpSetAt h (blockMap0 hdr)) h hdr adrs
 
 freeBlocks :: Device m h
            => h
            -> Header
            -> [Address]
            -> m ()
-freeBlocks h hdr adrs =
-     do mapM_ (a . sort) ps
-        mapM_ unsetp $ nub $ map (fst . head) ps
-  where ps     = groupBy g $ map (toSB_R hdr) adrs
-        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
-        a l = let sb = fst (head l)
-                  r1 = snd (head l)
-                  r2 = snd (last l)
-              in  bmpClear h (blockMap1 hdr) (sb * fromIntegral (superFactor hdr) + r1
-                                             ,sb * fromIntegral (superFactor hdr) + r2)
-        unsetp sb =
+freeBlocks h hdr adrs = balloc bmpClear unsetp h hdr adrs
+  where unsetp sb =
           do sch <- bmpFind h (blockMap1 hdr) ( sb    * fromIntegral (superFactor hdr)
                                               ,(sb+1) * fromIntegral (superFactor hdr) - 1) True
              case sch of
                Nothing -> bmpClearAt h (blockMap0 hdr) sb
                _       -> return ()
+
+-- DRYs up freeBlocks and allocateBlocks
+balloc dobit dosb h hdr adrs =
+     do mapM_ (a . sort) ps
+        mapM_ dosb $ nub $ map (fst . head) ps
+  where ps     = groupBy g $ map (toSB_R hdr) adrs
+        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
+        a l = let sb = fst (head l)
+                  r1 = snd (head l)
+                  r2 = snd (last l)
+              in  dobit h (blockMap1 hdr) (sb * fromIntegral (superFactor hdr) + r1
+                                          ,sb * fromIntegral (superFactor hdr) + r2)
 
 getFreeBlocks :: Device m h
               => h
