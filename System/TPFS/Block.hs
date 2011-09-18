@@ -24,9 +24,8 @@ module System.TPFS.Block (
   overwriteBlocks,
   -- * Block allocation
   allocateBlocks,
+  allocateBlocksNear,
   freeBlocks,
-  getFreeBlocks,
-  getFreeBlocksNear,
   -- * High-level interface
   {-
   getChain,
@@ -215,46 +214,33 @@ overwriteBlocks h hdr a o s =
                                   Nothing -> return s'
                                   Just a' -> f a' 0 s'
 
--- | Marks a list of blocks on the allocation table as allocated.
-allocateBlocks :: Device m h
+-- | Finds a number of free blocks, allocates them, and returns the
+-- allocated blocks.
+allocateBlocks :: (Device m h, Integral i)
                => h
                -> Header
-               -> [Address]  -- ^ A list of blocks to allocate, as absolute addresses to each block.
-               -> m ()
-allocateBlocks h hdr adrs = balloc bmpSet
+               -> i           -- ^ Number of blocks to allocate.
+               -> m [Address] -- ^ A list of allocated blocks.
+allocateBlocks = undefined
 
--- | Marks a list of blocks on the allocation table as free.
+-- | Similar to 'allocateBlocks', except it tries to find blocks near
+-- a reference block, if possible.
+allocateBlocksNear :: (Device m h, Integral i)
+                   => h
+                   -> Header
+                   -> Address      -- ^ Block to attempt to allocate more blocks near.
+                                   -- Often the last block in a chain.
+                   -> i            -- ^ Number of blocks to allocate.
+                   -> m [Address]  -- ^ A list of allocated blocks.
+allocateBlocksNear = undefined
+
+-- | Marks a range of blocks on the allocation table as free.
 freeBlocks :: Device m h
            => h
            -> Header
-           -> [Address]  -- ^ A list of blocks to free, as absolute addresses to each block.
+           -> (Address, Address)  -- ^ The range of blocks to free.
            -> m ()
-freeBlocks = balloc bmpClear
-
--- DRYs up freeBlocks and allocateBlocks
-balloc dobit h hdr adrs =
-     do mapM_ (a . sort) ps
-        mapM_ (rescanSB h hdr) $ nub $ map (fst . head) ps
-  where ps   = groupBy g $ map (toSB_R hdr) (sort adrs)
-        g (sb1,r1) (sb2,r2) = sb1 == sb2 && ((r2 - r1) `elem` [-1..1])
-        a l  = let sb = fst (head l)
-                   r1 = snd (head l)
-                   r2 = snd (last l)
-               in  dobit h (blockMapBL hdr) (sb * fromIntegral (superFactor hdr) + r1
-                                            ,sb * fromIntegral (superFactor hdr) + r2)
-
-getFreeBlocks :: Device m h
-              => h
-              -> Header
-              -> m [Address]
-getFreeBlocks = undefined
-
-getFreeBlocksNear :: Device m h
-                  => h
-                  -> Header
-                  -> Address
-                  -> m [Address]
-getFreeBlocksNear = undefined
+freeBlocks = undefined
 
 truncateString l s = head (chopString l s)
 
@@ -295,7 +281,7 @@ fromSB_R hdr (sb,r) = blockOffset hdr
                     + fromIntegral (sb * fromIntegral (superScale hdr))
                     + fromIntegral (r * fromIntegral (blockSize hdr))
 
-data SBState = SEmpty | SAvailable | SFull
+data SBState = SEmpty | SAvailable | SFull deriving Eq
 
 readSBMap :: (Device m h, Integral i) => h -> Header -> (i, i) -> m [SBState]
 readSBMap h hdr (a,b) = do empty <- bmpRead h (blockMapSE hdr) (a,b)
@@ -311,13 +297,13 @@ searchSBMap h hdr (a,b) st =
 
 writeSBState :: (Device m h, Integral i) => h -> Header -> i -> SBState -> m ()
 writeSBState h hdr i st =
-  do (case st of { SEmpty -> bmpClearAt, _ -> bmpSetAt   }) h (blockMapSE hdr) i
-     (case st of { SFull  -> bmpSetAt,   _ -> bmpClearAt }) h (blockMapSF hdr) i
+  do (case st of { SEmpty -> bmpClearAt ; _ -> bmpSetAt   }) h (blockMapSE hdr) i
+     (case st of { SFull  -> bmpSetAt   ; _ -> bmpClearAt }) h (blockMapSF hdr) i
 
 rescanSB :: (Device m h, Integral i) => h -> Header -> i -> m ()
 rescanSB h hdr i =
-  do bs <- bmpRead h (blockMapBL hdr) ( i    * superFactor hdr
-                                      ,(i+1) * superFactor hdr - 1)
+  do bs <- bmpRead h (blockMapBL hdr) ( i    * fromIntegral (superFactor hdr)
+                                      ,(i+1) * fromIntegral (superFactor hdr) - 1)
      writeSBState h hdr i $
        if True `elem` bs
           then if False `elem` bs
