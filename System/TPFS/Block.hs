@@ -221,7 +221,54 @@ allocateBlocks :: (Device m h, Integral i)
                -> Header
                -> i           -- ^ Number of blocks to allocate.
                -> m [Address] -- ^ A list of allocated blocks.
-allocateBlocks = undefined
+allocateBlocks h hdr c = readSBMap h hdr (0, sbs - 1) >>= a c
+  where sbs = fromIntegral (superBlocks hdr)
+        sbf = fromIntegral (superFactor hdr)
+        spread = 16
+        a c pool
+          | c < 1               = return []
+          | all (== SFull) pool = return []
+          | otherwise =
+            let em = find ((== SEmpty).fst) (pool `zip` [0..])
+            in  case em of
+                  Just (_,sb)
+                    | c >= sbf ->
+                      -- we've found an empty superblock, and we can fill it.
+                      do writeSBState h hdr sb SFull
+                         bmpSet h (blockMapBL hdr) (sbf *  sb
+                                                   ,sbf * (sb+1) - 1)
+                         let (p1,p2) = genericSplitAt (sb) pool
+                             pool'   = p1 ++ (SFull : tail p2)
+                         a' <- a (c - sbf) pool'
+                         return $ map (indexToAddress hdr) [sbf *  sb ..
+                                                            sbf * (sb+1) - 1] ++ a'
+                    | otherwise ->
+                      -- we've found an empty superblock, and we can start putting stuff in it.
+                      do writeSBState h hdr sb SAvailable
+                         let sbb  = sbf * sb
+                             sbb' = sbb + c - 1
+                         bmpSet h (blockMapBL hdr) (sbb, sbb')
+                         return $ map (indexToAddress hdr) [sbb .. sbb']
+                  Nothing ->
+                    -- TODO: Search per-superblock instead of the whole block space.
+                    do m <- bmpRead h (blockMapBL hdr) (0, maxBlocks hdr)
+                       let bhs = map (\l -> (snd (head l), snd (last l))) .
+                                 filter (\l -> fst (head l) == False) .
+                                 groupBy (\(a,_) (b,_) -> a == b) $
+                                 m `zip` [0..] -- block holes
+                           phs = map (\(x,y)->(x+16,y-16)) $
+                                 filter (\(x,y) -> y - x >= spread*2) bhs -- padded block holes
+                           uhs = filter (\(x,y) -> y - x <  spread*2) bhs -- block holes without padding
+                           al _          0 = return []
+                           al []         _ = return []
+                           al ((x,y):rs) b = let ls = minimum [y - x + 1, c]
+                                                 am = (x, x + ls - 1)
+                                             in  do bmpSet h (blockMapBL hdr) am
+                                                    (map (indexToAddress hdr) [fst am..snd am] ++) <$>
+                                                     al rs (b-ls)
+                       adrs <- al (phs++uhs) c
+                       mapM_ (rescanSB h hdr) (nub $ map (fst.toSB_R hdr) adrs)
+                       return adrs
 
 -- | Similar to 'allocateBlocks', except it tries to find blocks near
 -- a reference block, if possible.
@@ -281,7 +328,7 @@ fromSB_R hdr (sb,r) = blockOffset hdr
                     + fromIntegral (sb * fromIntegral (superScale hdr))
                     + fromIntegral (r * fromIntegral (blockSize hdr))
 
-data SBState = SEmpty | SAvailable | SFull deriving Eq
+data SBState = SEmpty | SAvailable | SFull deriving (Show, Eq)
 
 readSBMap :: (Device m h, Integral i) => h -> Header -> (i, i) -> m [SBState]
 readSBMap h hdr (a,b) = do empty <- bmpRead h (blockMapSE hdr) (a,b)
