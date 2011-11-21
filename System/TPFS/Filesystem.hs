@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
-module System.TPFS.Filesystem ( 
+-- | Functions for creation and initialization of filesystems.
+module System.TPFS.Filesystem (
     Filesystem(..),
     fsFromFile,
     newFSInFile
@@ -16,13 +17,18 @@ data Device m h => Filesystem m h = Filesystem { fsHandle :: h
                                                , fsHeader :: Header }
                                   deriving Show
 
-fsFromFile :: String -> IO (Filesystem IO Handle)
+-- | Opens a filesystem stored in a file.
+fsFromFile :: String                    -- ^ The path to the file containing the filesystem.
+           -> IO (Filesystem IO Handle) -- ^ The opened filesystem.
 
 fsFromFile path = do h   <- openFile path ReadWriteMode
                      hdr <- getHeader h
                      return $ Filesystem h hdr
 
-newFSInFile :: Header -> String -> IO (Filesystem IO Handle)
+-- | Creates a new filesystem within a file.
+newFSInFile :: Header                    -- ^ The filesystem header.
+            -> String                    -- ^ The path to the file that should contain the filesystem.
+            -> IO (Filesystem IO Handle) -- ^ The created filesystem.
 
 newFSInFile hdr path = do h <- openFile path ReadWriteMode
                           putHeader h hdr

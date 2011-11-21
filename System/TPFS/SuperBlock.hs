@@ -11,6 +11,7 @@ import           System.TPFS.Address
 import           System.TPFS.Bitmap
 import           System.TPFS.SolidArray
 
+-- | Describes the three states a superblock can be in.
 data SuperBlockState = SBEmpty
                      | SBSpaceAvailable
                      | SBFull
@@ -23,12 +24,16 @@ instance SolidArray SuperBlockState where
 -- | Converts a list of bits into the equivalent @['SuperBlockState']@. The
 -- input list length must be even, and the output list length will
 -- always be half that of the input list.
+bitsToSBStates :: [Bool] -> [SuperBlockState]
+
 bitsToSBStates (False : False : xs) = SBEmpty          : bitsToSBStates xs
 bitsToSBStates (True  : False : xs) = SBSpaceAvailable : bitsToSBStates xs
 bitsToSBStates (True  : True  : xs) = SBFull           : bitsToSBStates xs
 bitsToSBStates []                   = []
 
 -- | Converts @['SuperBlockState']@ into a list of bits. Dual of 'bitsToSBState'.
+sbStatesToBits :: [SuperBlockState] -> [Bool]
+
 sbStatesToBits (SBEmpty          : xs) = False : False : sbStatesToBits xs
 sbStatesToBits (SBSpaceAvailable : xs) = True  : False : sbStatesToBits xs
 sbStatesToBits (SBFull           : xs) = True  : True  : sbStatesToBits xs
