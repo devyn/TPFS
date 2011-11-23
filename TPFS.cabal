@@ -19,7 +19,7 @@ Synopsis:            Tagged plain file system in which a file can only have mult
 License:             BSD3
 
 -- The file containing the license text.
-License-file:        LICENSE
+License-file:        LICENSE.md
 
 -- The package author(s).
 Author:              The ΩF:∅ Foundation
