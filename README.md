@@ -24,6 +24,7 @@ before attempting this project.
 That said, if you're interested, here's a rough idea of what needs to
 be done:
 
+- Block allocation.
 - A B-Tree implementation in Haskell using the
   [Device](http://h.devyn.tk/docs/tpfs/System-TPFS-Device.html)
   API. This will be used for the file and tag indexes.
