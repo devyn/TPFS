@@ -1,11 +1,11 @@
 -- | Functions for dealing with TPFS blocks and allocation. Blocks are
--- structured on disk as such in pseudo-C:
+-- linked by dynamic array structures on disk:
 -- 
 -- @
---     struct Block {
---       char['blockSize' - 16] content;
---       'Address'              next;
---     };
+-- struct BlockArray {
+--   'BlockIndex' blocks[n]; // where n is as many of these entries that can fit within a block
+--   'BlockIndex' next;      // a pointer to more blocks, or special index 0 (null)
+-- }
 -- @
 module System.TPFS.Block (
   -- * Primitive operations
