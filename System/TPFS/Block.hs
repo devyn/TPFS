@@ -5,7 +5,6 @@ module System.TPFS.Block (
   BlockArray(..),
   -- * Reading
   readBlockArray,
-  bytePosToBlockIndexOffset,
   readBytesFromBlocks,
   -- * Writing
   writeBlockArray,
@@ -57,8 +56,6 @@ readBlockArray h hdr idx =
                          , nextArray = last ar
                          }
   where elc = blockSize hdr `quot` 8 -- Word64 is 8 bytes
-
-bytePosToBlockIndexOffset = undefined
 
 readBytesFromBlocks = undefined
 
