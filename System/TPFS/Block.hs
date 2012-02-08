@@ -23,7 +23,10 @@ module System.TPFS.Block (
 
 import           Control.Applicative
 import qualified Control.Exception as E
+import           Control.Monad (replicateM)
+import           Data.Array
 import           Data.Binary
+import           Data.Binary.Get
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as B
 import           Data.List
@@ -37,11 +40,23 @@ import           System.TPFS.Header
 
 type BlockIndex = Word64
 
-data BlockArray = BlockArray { blocks    :: Array Int (Maybe BlockIndex)
-                             , nextArray :: Maybe BlockIndex
+data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
+                             , nextArray :: BlockIndex
                              }
 
-readBlockArray = undefined
+readBlockArray :: Device m h
+               => h
+               -> Header
+               -> BlockIndex
+               -> m BlockArray
+
+readBlockArray h hdr idx =
+  do ars <- dGet h (blockIndexToAddress hdr idx) (blockSize hdr)
+     let ar = runGet (replicateM (fromIntegral elc) $ getWord64le) ars
+     return $ BlockArray { blocks    = listArray (0, fromIntegral elc-2) (init ar)
+                         , nextArray = last ar
+                         }
+  where elc = blockSize hdr `quot` 8 -- Word64 is 8 bytes
 
 bytePosToBlockIndexOffset = undefined
 
@@ -68,6 +83,17 @@ i `divBlocks` hdr
     | otherwise = q + 1
   where (q, r)  = i `quotRem` fromIntegral (blockSize hdr - 16)
 
-blockIndexToAddress = undefined
+blockIndexToAddress :: Header
+                    -> BlockIndex
+                    -> Address
 
-addressToBlockIndex = undefined
+blockIndexToAddress hdr idx = blockOffset hdr + fromIntegral (blockSize hdr) * fromIntegral (idx - 1)
+
+addressToBlockIndex :: Header
+                    -> Address
+                    -> BlockIndex
+
+addressToBlockIndex hdr a
+      = toZero $ fromIntegral (quot (a - blockOffset hdr) (fromIntegral $ blockSize hdr)) + 1
+  where toZero x | x < 1     = 0
+                 | otherwise = x
