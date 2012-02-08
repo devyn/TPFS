@@ -43,11 +43,15 @@ data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
                              , nextArray :: BlockIndex
                              }
 
+-- | Reads a 'BlockArray' object from disk.
+--
+-- Please note that this makes no attempt to check whether
+-- the object being referenced is really a 'BlockArray'.
 readBlockArray :: Device m h
                => h
                -> Header
-               -> BlockIndex
-               -> m BlockArray
+               -> BlockIndex   -- ^ Index of the 'BlockArray' object to read.
+               -> m BlockArray -- ^ The read information.
 
 readBlockArray h hdr idx =
   do ars <- dGet h (blockIndexToAddress hdr idx) (blockSize hdr)
