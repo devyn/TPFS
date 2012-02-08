@@ -45,8 +45,8 @@ data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
 
 -- | Reads a 'BlockArray' object from disk.
 --
--- Please note that this makes no attempt to check whether
--- the object being referenced is really a 'BlockArray'.
+-- Please note that this makes no attempt to check whether the object being
+-- referenced is really a 'BlockArray'.
 readBlockArray :: Device m h
                => h
                -> Header
