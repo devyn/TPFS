@@ -112,8 +112,8 @@ readBlockArray h hdr idx =
 writeBlockArray :: Device m h
                 => h
                 -> Header
-                -> BlockIndex
-                -> BlockArray
+                -> BlockIndex -- ^ The block to write to.
+                -> BlockArray -- ^ The 'BlockArray' object to write.
                 -> m ()
 
 writeBlockArray h hdr idx ary = dPut h (blockIndexToAddress hdr idx) str
