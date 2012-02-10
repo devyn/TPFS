@@ -120,7 +120,17 @@ writeBlockArray h hdr idx ary = dPut h (blockIndexToAddress hdr idx) str
   where str     = runPut $ foldl put (pure ()) (elems $ blocks ary) >> putWord64le (nextArray ary)
         put m e = m >> putWord64le e
 
-linkBlockArray = undefined
+-- | Links a 'BlockArray' object with another 'BlockArray' object on disk,
+-- without needing to read and replace the entire object.
+linkBlockArray :: Device m h
+               => h
+               -> Header
+               -> BlockIndex -- ^ The 'BlockArray' object to modify.
+               -> BlockIndex -- ^ The destination for the 'nextArray' field.
+               -> m ()
+
+linkBlockArray h hdr a b = dPut h adr $ runPut $ putWord64le b
+  where adr = blockIndexToAddress hdr a + fromIntegral ((quot (blockSize hdr) 8 - 1) * 8)
 
 --- Extents ---
 
