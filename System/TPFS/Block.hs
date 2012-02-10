@@ -100,42 +100,40 @@ data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
 -- Please note that this makes no attempt to check whether the object being
 -- referenced is really a 'BlockArray'.
 readBlockArray :: Device m h
-               => h
-               -> Header
+               => Filesystem m h
                -> BlockIndex   -- ^ Index of the 'BlockArray' object to read.
                -> m BlockArray -- ^ The read information.
 
-readBlockArray h hdr idx =
-  do ars <- dGet h (blockIndexToAddress hdr idx) (blockSize hdr)
+readBlockArray fs idx =
+  do ars <- dGet (fsHandle fs)  (blockIndexToAddress (fsHeader fs) idx)
+                                         (blockSize $ fsHeader fs)
      let ar = runGet (replicateM (fromIntegral elc) $ getWord64le) ars
      return $ BlockArray { blocks    = listArray (0, fromIntegral elc-2) (init ar)
                          , nextArray = last ar
                          }
-  where elc = blockSize hdr `quot` 8 -- Word64 is 8 bytes
+  where elc = blockSize (fsHeader fs) `quot` 8 -- Word64 is 8 bytes
 
 -- | Writes a 'BlockArray' object to disk.
 writeBlockArray :: Device m h
-                => h
-                -> Header
+                => Filesystem m h
                 -> BlockIndex -- ^ The block to write to.
                 -> BlockArray -- ^ The 'BlockArray' object to write.
                 -> m ()
 
-writeBlockArray h hdr idx ary = dPut h (blockIndexToAddress hdr idx) str
+writeBlockArray fs idx ary = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx) str
   where str     = runPut $ foldl put (pure ()) (elems $ blocks ary) >> putWord64le (nextArray ary)
         put m e = m >> putWord64le e
 
 -- | Links a 'BlockArray' object with another 'BlockArray' object on disk,
 -- without needing to read and replace the entire object.
 linkBlockArray :: Device m h
-               => h
-               -> Header
+               => Filesystem m h
                -> BlockIndex -- ^ The 'BlockArray' object to modify.
                -> BlockIndex -- ^ The destination for the 'nextArray' field.
                -> m ()
 
-linkBlockArray h hdr a b = dPut h adr $ runPut $ putWord64le b
-  where adr = blockIndexToAddress hdr a + fromIntegral ((quot (blockSize hdr) 8 - 1) * 8)
+linkBlockArray fs a b = dPut (fsHandle fs) adr $ runPut $ putWord64le b
+  where adr = blockIndexToAddress (fsHeader fs) a + fromIntegral ((quot (blockSize (fsHeader fs)) 8 - 1) * 8)
 
 --- Extents ---
 
