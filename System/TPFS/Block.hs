@@ -61,12 +61,17 @@ i `divBlocks` hdr
     | otherwise = q + 1
   where (q, r)  = i `quotRem` fromIntegral (blockSize hdr - 16)
 
+-- | Converts a 'BlockIndex' to an 'Address' in the context of a filesystem.
 blockIndexToAddress :: Header
                     -> BlockIndex
                     -> Address
 
 blockIndexToAddress hdr idx = blockOffset hdr + fromIntegral (blockSize hdr) * fromIntegral (idx - 1)
 
+-- | Converts an 'Address' to a 'Blockindex' in the context of a filesystem.
+--
+-- Note: This function will floor any addresses to the block boundary; it does
+-- not preserve offsets.
 addressToBlockIndex :: Header
                     -> Address
                     -> BlockIndex
