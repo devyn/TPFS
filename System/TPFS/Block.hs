@@ -36,6 +36,7 @@ import           Control.Monad (replicateM)
 import           Data.Array
 import           Data.Binary
 import           Data.Binary.Get
+import           Data.Binary.Put
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as B
 import           Data.List
@@ -107,7 +108,17 @@ readBlockArray h hdr idx =
                          }
   where elc = blockSize hdr `quot` 8 -- Word64 is 8 bytes
 
-writeBlockArray = undefined
+-- | Writes a 'BlockArray' object to disk.
+writeBlockArray :: Device m h
+                => h
+                -> Header
+                -> BlockIndex
+                -> BlockArray
+                -> m ()
+
+writeBlockArray h hdr idx ary = dPut h (blockIndexToAddress hdr idx) str
+  where str     = runPut $ foldl put (pure ()) (elems $ blocks ary) >> putWord64le (nextArray ary)
+        put m e = m >> putWord64le e
 
 linkBlockArray = undefined
 
