@@ -12,9 +12,6 @@
 -- ('BlockArray's) for space reasons.
 module System.TPFS.Block (
   -- * Blocks
-  BlockIndex,
-  blockIndexToAddress,
-  addressToBlockIndex,
   divBlocks,
   allocateBlocks,
   allocateBlock,
@@ -41,7 +38,6 @@ import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as B
 import           Data.List
 import           Data.Word
-import           System.TPFS.Address
 import           System.TPFS.Bitmap
 import           System.TPFS.Device
 import           System.TPFS.Errors
@@ -49,8 +45,6 @@ import           System.TPFS.Filesystem
 import           System.TPFS.Header
 
 --- Blocks ---
-
-type BlockIndex = Word64
 
 -- | Divides a number of bytes into the required number of blocks
 -- according to a filesystem header.
@@ -60,26 +54,6 @@ i `divBlocks` hdr
     | r == 0    = q
     | otherwise = q + 1
   where (q, r)  = i `quotRem` fromIntegral (blockSize hdr - 16)
-
--- | Converts a 'BlockIndex' to an 'Address' in the context of a filesystem.
-blockIndexToAddress :: Header
-                    -> BlockIndex
-                    -> Address
-
-blockIndexToAddress hdr idx = blockOffset hdr + fromIntegral (blockSize hdr) * fromIntegral (idx - 1)
-
--- | Converts an 'Address' to a 'Blockindex' in the context of a filesystem.
---
--- Note: This function will floor any addresses to the block boundary; it does
--- not preserve offsets.
-addressToBlockIndex :: Header
-                    -> Address
-                    -> BlockIndex
-
-addressToBlockIndex hdr a
-      = toZero $ fromIntegral (quot (a - blockOffset hdr) (fromIntegral $ blockSize hdr)) + 1
-  where toZero x | x < 1     = 0
-                 | otherwise = x
 
 allocateBlocks = undefined
 
@@ -91,8 +65,8 @@ freeBlock = undefined
 
 --- Block arrays ---
 
-data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
-                             , nextArray :: BlockIndex
+data BlockArray = BlockArray { blocks    :: Array Word Address
+                             , nextArray :: Address
                              }
 
 -- | Reads a 'BlockArray' object from disk.
@@ -101,12 +75,11 @@ data BlockArray = BlockArray { blocks    :: Array Word (BlockIndex)
 -- referenced is really a 'BlockArray'.
 readBlockArray :: Device m h
                => Filesystem m h
-               -> BlockIndex   -- ^ Index of the 'BlockArray' object to read.
+               -> Address      -- ^ The address of the 'BlockArray' object to read.
                -> m BlockArray -- ^ The read information.
 
-readBlockArray fs idx =
-  do ars <- dGet (fsHandle fs)  (blockIndexToAddress (fsHeader fs) idx)
-                                         (blockSize $ fsHeader fs)
+readBlockArray fs src =
+  do ars <- dGet (fsHandle fs) src (blockSize $ fsHeader fs)
      let ar = runGet (replicateM (fromIntegral elc) $ getWord64le) ars
      return $ BlockArray { blocks    = listArray (0, fromIntegral elc-2) (init ar)
                          , nextArray = last ar
@@ -116,11 +89,11 @@ readBlockArray fs idx =
 -- | Writes a 'BlockArray' object to disk.
 writeBlockArray :: Device m h
                 => Filesystem m h
-                -> BlockIndex -- ^ The block to write to.
+                -> Address    -- ^ The address of the block to write to.
                 -> BlockArray -- ^ The 'BlockArray' object to write.
                 -> m ()
 
-writeBlockArray fs idx ary = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx) str
+writeBlockArray fs dst ary = dPut (fsHandle fs) dst str
   where str     = runPut $ foldl put (pure ()) (elems $ blocks ary)
                         >> putWord64le (nextArray ary)
         put m e = m >> putWord64le e
@@ -129,12 +102,12 @@ writeBlockArray fs idx ary = dPut (fsHandle fs) (blockIndexToAddress (fsHeader f
 -- without needing to read and replace the entire object.
 linkBlockArray :: Device m h
                => Filesystem m h
-               -> BlockIndex -- ^ The 'BlockArray' object to modify.
-               -> BlockIndex -- ^ The destination for the 'nextArray' field.
+               -> Address -- ^ The address of the 'BlockArray' object to modify.
+               -> Address -- ^ The destination for the 'nextArray' field.
                -> m ()
 
-linkBlockArray fs a b = dPut (fsHandle fs) adr $ runPut $ putWord64le b
-  where adr = blockIndexToAddress (fsHeader fs) a + fromIntegral ((blockSize (fsHeader fs) `quot` 8 - 1) * 8)
+linkBlockArray fs a b = dPut (fsHandle fs) adr . runPut $ putWord64le b
+            where adr = a + blockSize (fsHeader fs) - 8
 
 --- Extents ---
 

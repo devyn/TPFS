@@ -2,7 +2,6 @@
 -- such.
 module System.TPFS.SolidArray (SolidArray(..)) where
 
-import System.TPFS.Address
 import System.TPFS.Device
 
 -- | Solid arrays are on-disk arrays of values of type @t@. They can

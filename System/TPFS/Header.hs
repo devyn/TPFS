@@ -5,7 +5,6 @@ import           Data.Binary
 import           Data.Binary.Get
 import           Data.Binary.Put
 import           Data.Word
-import           System.TPFS.Address
 import           System.TPFS.Device
 
 -- | A TPFS filesystem header, which is located at offset 0 in any
@@ -17,7 +16,7 @@ data Header = Header { fileOffset    :: Address  -- ^ The address of the beginni
                      , superBlockMap :: Address  -- ^ The address to the superblock-level bitmap.
                      , blockMap      :: Address  -- ^ The address to the block-level bitmap.
                      , blockOffset   :: Address  -- ^ The beginning of the block space.
-                     , blockSize     :: Word32   -- ^ The size of each block. Actual block content is
+                     , blockSize     :: Word64   -- ^ The size of each block. Actual block content is
                                                  -- @blockSize hdr - 16@ due to the pointer at the end of a block.
                      , maxBlocks     :: Word64   -- ^ Block capacity of the file system.
                      }
@@ -25,29 +24,29 @@ data Header = Header { fileOffset    :: Address  -- ^ The address of the beginni
 
 -- | The calculated size of a header in bytes. It is constant for any
 -- header.
-headerSize = 124
+headerSize = 80
 
 instance Binary Header where
   get     = do get :: Get Magic
-               Header <$> get
+               Header <$> getWord64le
                       <*> getWord64le
-                      <*> get
                       <*> getWord64le
-                      <*> get
-                      <*> get
-                      <*> get
-                      <*> getWord32le
+                      <*> getWord64le
+                      <*> getWord64le
+                      <*> getWord64le
+                      <*> getWord64le
+                      <*> getWord64le
                       <*> getWord64le
 
   put hdr = do put         $ Magic
-               put         $ fileOffset    hdr
+               putWord64le $ fileOffset    hdr
                putWord64le $ maxFiles      hdr
-               put         $ tagOffset     hdr
+               putWord64le $ tagOffset     hdr
                putWord64le $ maxFiles      hdr
-               put         $ superBlockMap hdr
-               put         $ blockMap      hdr
-               put         $ blockOffset   hdr
-               putWord32le $ blockSize     hdr
+               putWord64le $ superBlockMap hdr
+               putWord64le $ blockMap      hdr
+               putWord64le $ blockOffset   hdr
+               putWord64le $ blockSize     hdr
                putWord64le $ maxBlocks     hdr
 
 -- | Loads the filesystem header from a device.

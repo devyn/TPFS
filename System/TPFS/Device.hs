@@ -1,14 +1,16 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 -- | Defines a readable and writable random-access device class.
-module System.TPFS.Device (Device(..), Interleave(..)) where
+module System.TPFS.Device (Address, Device(..), Interleave(..)) where
 
 import           Control.Applicative
 import           Data.ByteString.Lazy (ByteString,hGet,hPut)
 import qualified Data.ByteString.Lazy as B
+import           Data.Word
 import           System.IO
 import           System.IO.Unsafe (unsafeInterleaveIO)
-import           System.TPFS.Address
+
+type Address = Word64
 
 class (Functor m, Applicative m, Monad m, Interleave m) => Device m h where
   -- | Reads bytes from the device. It should never return less than
