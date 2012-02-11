@@ -121,7 +121,8 @@ writeBlockArray :: Device m h
                 -> m ()
 
 writeBlockArray fs idx ary = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx) str
-  where str     = runPut $ foldl put (pure ()) (elems $ blocks ary) >> putWord64le (nextArray ary)
+  where str     = runPut $ foldl put (pure ()) (elems $ blocks ary)
+                        >> putWord64le (nextArray ary)
         put m e = m >> putWord64le e
 
 -- | Links a 'BlockArray' object with another 'BlockArray' object on disk,
@@ -133,7 +134,7 @@ linkBlockArray :: Device m h
                -> m ()
 
 linkBlockArray fs a b = dPut (fsHandle fs) adr $ runPut $ putWord64le b
-  where adr = blockIndexToAddress (fsHeader fs) a + fromIntegral ((quot (blockSize (fsHeader fs)) 8 - 1) * 8)
+  where adr = blockIndexToAddress (fsHeader fs) a + fromIntegral ((blockSize (fsHeader fs) `quot` 8 - 1) * 8)
 
 --- Extents ---
 
