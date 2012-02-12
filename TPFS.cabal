@@ -45,8 +45,7 @@ Cabal-version:       >=1.2
 
 Library
   -- Modules exported by the library.
-  Exposed-modules:   System.TPFS.Address,
-                     System.TPFS.Bitmap,
+  Exposed-modules:   System.TPFS.Bitmap,
                      System.TPFS.Block,
                      System.TPFS.Device,
                      System.TPFS.Errors,

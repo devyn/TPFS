@@ -31,7 +31,6 @@ module System.TPFS.Block (
 import           Control.Applicative
 import qualified Control.Exception as E
 import           Control.Monad (replicateM)
-import           Data.Array
 import           Data.Binary
 import           Data.Binary.Get
 import           Data.Binary.Put

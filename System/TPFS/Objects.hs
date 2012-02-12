@@ -36,7 +36,6 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as BS
 import           Data.Word
 import           System.Random
-import           System.TPFS.Address
 import           System.TPFS.Device
 import           System.TPFS.Filesystem
 

@@ -7,7 +7,6 @@ module System.TPFS.SuperBlock (
 
 import           Control.Applicative
 import qualified Data.ByteString.Lazy as B
-import           System.TPFS.Address
 import           System.TPFS.Bitmap
 import           System.TPFS.SolidArray
 
