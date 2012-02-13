@@ -19,19 +19,10 @@ module System.TPFS.Block (
   writeBlock
   ) where
 
-import           Control.Applicative
-import qualified Control.Exception as E
-import           Control.Monad (replicateM)
 import           Data.Binary
-import           Data.Binary.Get
-import           Data.Binary.Put
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as B
-import           Data.List
-import           Data.Word
-import           System.TPFS.Bitmap
 import           System.TPFS.Device
-import           System.TPFS.Errors
 import           System.TPFS.Filesystem
 import           System.TPFS.Header
 

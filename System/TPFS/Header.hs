@@ -4,7 +4,6 @@ import           Control.Applicative
 import           Data.Binary
 import           Data.Binary.Get
 import           Data.Binary.Put
-import           Data.Word
 import           System.TPFS.Device
 
 -- | A TPFS filesystem header, which is located at offset 0 in any
