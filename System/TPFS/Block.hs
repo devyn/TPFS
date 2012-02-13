@@ -1,31 +1,22 @@
--- | Functions for dealing with TPFS blocks and extents.
+-- | Functions for dealing with TPFS blocks.
 --
--- This is not a high level interface; aside from providing the block array
--- structures, it does not deal with block chains. It does, however, provide
--- allocation, destruction, reading and writing of the individual objects
--- themselves.
+-- This is not a high level interface; it only provides a few utility functions
+-- for dealing with the blocks on disk themselves. It does not deal with
+-- extents or anything like that. See 'System.TPFS.Extent'.
 --
 -- If you are looking for a high level interface, check out the modules for the
 -- the objects you are trying to access, as TPFS blocks simply contain these
--- objects. Different objects' blocks are often linked together in different
--- ways as well; some may be simple linked lists instead of dynamic arrays
--- ('BlockArray's) for space reasons.
+-- objects.
 module System.TPFS.Block (
-  -- * Blocks
+  -- * Indexing
   BlockIndex,
   blockIndexToAddress,
   addressToBlockIndex,
   addressToBlockIndexAndOffset,
   divBlocks,
+  -- * Reading and writing
   readBlock,
-  writeBlock,
-  allocateBlocks,
-  allocateBlock,
-  freeBlocks,
-  freeBlock,
-  -- * Extents
-  allocateExtent,
-  freeExtent
+  writeBlock
   ) where
 
 import           Control.Applicative
@@ -44,7 +35,7 @@ import           System.TPFS.Errors
 import           System.TPFS.Filesystem
 import           System.TPFS.Header
 
---- Blocks ---
+--- Indexing ---
 
 type BlockIndex = Word64
 
@@ -91,6 +82,8 @@ i `divBlocks` hdr
     | otherwise = q + 1
   where (q, r)  = i `quotRem` fromIntegral (blockSize hdr - 16)
 
+--- Reading and writing ---
+
 -- | Reads an entire block into memory.
 readBlock :: Device m h
           => Filesystem m h
@@ -114,17 +107,3 @@ writeBlock fs idx str = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) id
                    = B.append str . flip B.replicate 0 $ fromIntegral (blockSize $ fsHeader fs) - B.length str
                | otherwise
                    = str
-
-allocateBlocks = undefined
-
-allocateBlock = undefined
-
-freeBlocks = undefined
-
-freeBlock = undefined
-
---- Extents ---
-
-allocateExtent = undefined
-
-freeExtent = undefined
