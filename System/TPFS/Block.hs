@@ -83,6 +83,27 @@ readBlock :: Device m h
 
 readBlock fs idx = dGet (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx) (blockSize (fsHeader fs))
 
+-- | Reads a section of a block into memory. Use sparingly: it is often faster
+-- (especially on hard drives) to read an entire block and store it if you
+-- think you'll be needing the same block shortly after.
+--
+-- This function does verify that the region that is to be read is indeed
+-- within the block. The real offset is @offset `mod` 'blockSize' ('fsHeader'
+-- fs)@, and the length will simply be truncated to the block boundary if it is
+-- found to read outside of it.
+readBlockSection :: Device m h
+                 => Filesystem m h
+                 -> BlockIndex
+                 -> Word64         -- ^ The offset to start reading from.
+                 -> Word64         -- ^ The length (in bytes) to read.
+                 -> m ByteString
+
+readBlockSection fs idx ofs len
+      = dGet (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx + ofs') len'
+  where ofs' = ofs   `mod`  blockSize (fsHeader fs)
+        len' | ofs' + len > blockSize (fsHeader fs) = blockSize (fsHeader fs) - ofs'
+             | otherwise                            = len
+
 -- | Replaces a block with the given string. The string is truncated/padded
 -- with NULs to fit the filesystem's block size.
 writeBlock :: Device m h
@@ -98,3 +119,18 @@ writeBlock fs idx str = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) id
                    = B.append str . flip B.replicate 0 $ fromIntegral (blockSize $ fsHeader fs) - B.length str
                | otherwise
                    = str
+
+-- | Writes a string within a block at a given offset. The string will be
+-- truncated if it does not fit within the block boundaries, but it will never
+-- be padded.
+writeBlockSection :: Device m h
+                  => Filesystem m h
+                  -> BlockIndex
+                  -> Word64
+                  -> ByteString
+                  -> m ()
+
+writeBlockSection fs idx ofs str
+      = dPut (fsHandle fs) (blockIndexToAddress (fsHeader fs) idx + ofs') str'
+  where ofs' = ofs `mod` blockSize (fsHeader fs)
+        str' = flip B.take str . fromIntegral $ blockSize (fsHeader fs) - ofs'
