@@ -1,9 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
--- | Defines a readable and writable random-access device class.
-module System.TPFS.Device (Address, Device(..), Interleave(..)) where
+-- | Defines a readable and writable random-access device class, and some
+-- supporting classes.
+module System.TPFS.Device (Address, Device(..), Interleave(..), BinarySize(..)) where
 
 import           Control.Applicative
+import           Data.Binary
 import           Data.ByteString.Lazy (ByteString,hGet,hPut)
 import qualified Data.ByteString.Lazy as B
 import           Data.Word
@@ -53,3 +55,17 @@ hGetI h l
 
 instance Interleave IO where
   interleave = unsafeInterleaveIO
+
+class Binary a => BinarySize a where
+  -- | Returns a minimum and maximum size (in bytes) for an encoded object of
+  -- this type. The actual value of the object itself should be discarded; this
+  -- should be a constant.
+  binarySize :: a -> (Integer, Integer)
+
+instance BinarySize Word8 where binarySize = const (1,1)
+
+instance BinarySize Word16 where binarySize = const (2,2)
+
+instance BinarySize Word32 where binarySize = const (4,4)
+
+instance BinarySize Word64 where binarySize = const (8,8)
